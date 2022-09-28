@@ -1,13 +1,12 @@
 // ==UserScript==
-// @name         fkcopblocklist
+// @name         自动屏蔽黑名单公司&发送简历
 // @namespace    https://freysu.github.io/
-// @version      0.1
-// @description  F**k BlackList Company
+// @version      1.0
+// @description  F**k BlackList Company！Auto Blocking Company and Auto Send Resume！
 // @author       FreySu
 // @match        *://*.zhipin.com/*
 // @match        *://*.zhaopin.com/*
 // @match        *://*.liepin.com/*
-// @match        *://*.lagou.com/*
 // @run-at       document-end
 // @require      https://cdn.staticfile.org/limonte-sweetalert2/8.19.0/sweetalert2.all.min.js
 // @require      https://unpkg.com/axios/dist/axios.min.js
@@ -17,6 +16,7 @@
 // @grant        GM_getValue
 // @grant        GM_addValueChangeListener
 // ==/UserScript==
+
 /* eslint-disable no-undef */
 /* eslint-disable no-lone-blocks */
 /* eslint-disable new-cap */
@@ -26,15 +26,16 @@
 
 ;(async function () {
   'use strict'
-
-  var _config_autoSendResume_enabled = true
-
-  var _config_hijacking_enabled = true
-
+  // ------------------------------------------------------
+  // 配置区
+  //
+  // 是否开启自动屏蔽黑名单功能
   var _config_autoBlock_enabled = true
-
+  // 隐藏或显示命中的黑名单公司
   var _config_isShow = false
-
+  // 是否开启自动发送简历功能
+  var _config_autoSendResume_enabled = false
+  // 黑名单数组
   const _config_blackListArr = [
     '利德世普',
     '66电子商务',
@@ -1170,9 +1171,14 @@
     '鑫泽源创新技术',
     '鲲鹏'
   ]
-
+  // 白名单数组
   const _config_whiteListArr = ['深圳中科西力']
 
+  // ------------------------------------------------------
+
+  /**
+   * 勿动
+   */
   const _config_jobListDomSelectorArr = [
     {
       el: '.job-card-right .company-name',
@@ -1203,7 +1209,6 @@
       siteType: 4
     }
   ]
-
   const _config_detailListDomSelectorArr = [
     {
       el: '.sider-company .company-info',
@@ -1231,32 +1236,43 @@
     }
   ]
 
-  GM_addStyle(
-    `#TManays{z-index:999999; position:absolute; left:0px; top:0px; width:100px; height:auto; border:0; margin:0;}#parseUl{position:fixed;top:80px; left:0px;}#parseUl li{list-style:none;}.TM1{opacity:0.3; position:relative;padding: 0 7px 0 0; min-width: 19px; cursor:pointer;}.TM1:hover{opacity:1;}.TM1 span{display:block; border-radius:0 5px 5px 0; background-color:#ffff00; border:0; font:bold 15px "微软雅黑" !important; color:#ff0000; margin:0; padding:15px 2px;}.TM3{position:absolute; top:0; left:19px; display:none; border-radius:5px; margin:0; padding:0;}.TM3 li{float:none; width:80px; margin:0; font-size:14px; padding:3px 10px 2px 15px; cursor:pointer; color:#3a3a3a !important; background:rgba(255,255,0,0.8)}.TM3 li:hover{color:white !important; background:rgba(0,0,0,0.8);}.TM3 li:last-child{border-radius: 0 0 5px 5px;}.TM3 li:first-child{border-radius: 5px 5px 0 0;}.TM1:hover .TM3{display:block}`
-  )
-
-  GM_setValue('_jobListJson_boss', null)
-  GM_setValue('_zp_token', null)
-
-  GM_setValue('_zl_currentJobNumbers', null)
-  GM_setValue('_zl_joblist', null)
-  GM_setValue('_zl_params_details', null)
-  GM_setValue('_zl_params_cityIds', null)
-
-  GM_setValue('_lp_params_resId', null)
-  GM_setValue('_lp_params_jobCardList', null)
-
   var isTimesExhausted_bs = false
   var errMsg_bs = ''
   var isTimesExhausted_lp = false
   var errMsg_lp = ''
+  var hijacking_enabled = false
 
+  /**
+   * 悬浮窗样式
+   */
+  GM_addStyle(
+    `#TManays{z-index:999999; position:absolute; left:0px; top:0px; width:100px; height:auto; border:0; margin:0;}#parseUl{position:fixed;top:80px; left:0px;}#parseUl li{list-style:none;}.TM1{opacity:0.3; position:relative;padding: 0 7px 0 0; min-width: 19px; cursor:pointer;}.TM1:hover{opacity:1;}.TM1 span{display:block; border-radius:0 5px 5px 0; background-color:#ffff00; border:0; font:bold 15px "微软雅黑" !important; color:#ff0000; margin:0; padding:15px 2px;}.TM3{position:absolute; top:0; left:19px; display:none; border-radius:5px; margin:0; padding:0;}.TM3 li{float:none; width:80px; margin:0; font-size:14px; padding:3px 10px 2px 15px; cursor:pointer; color:#3a3a3a !important; background:rgba(255,255,0,0.8)}.TM3 li:hover{color:white !important; background:rgba(0,0,0,0.8);}.TM3 li:last-child{border-radius: 0 0 5px 5px;}.TM3 li:first-child{border-radius: 5px 5px 0 0;}.TM1:hover .TM3{display:block}`
+  )
+
+  /**
+   * 以下值，不要修改！
+   */
+  GM_setValue('_jobListJson_boss', null)
+  GM_setValue('_zp_token', null)
+  GM_setValue('_zl_currentJobNumbers', null)
+  GM_setValue('_zl_joblist', null)
+  GM_setValue('_zl_params_details', null)
+  GM_setValue('_zl_params_cityIds', null)
+  GM_setValue('_lp_params_resId', null)
+  GM_setValue('_lp_params_jobCardList', null)
+
+  /**
+   * 适配不同浏览器的匹配选择器
+   */
   Element.prototype.matches = Element.prototype.matches || ``
   Element.prototype.matchesSelector ||
     Element.prototype.webkitMatchesSelector ||
     Element.prototype.msMatchesSelector ||
     Element.prototype.mozMatchesSelector
 
+  /**
+   * 监听翻页-history模式
+   */
   const _historyWrap = function (type) {
     const orig = history[type]
     const e = new Event(type)
@@ -1304,11 +1320,14 @@
         }, 5)
       }, 3000)
     } else {
-      console.log('firstRunFlag: ', firstRunFlag)
+      // console.log('firstRunFlag: ', firstRunFlag)
       firstRunFlag.remove()
     }
   })
 
+  /**
+   * 通知
+   */
   const myToast = {
     /**
      * @description toast通知
@@ -1397,6 +1416,9 @@
     }
   }
 
+  /**
+   * 工具库
+   */
   const myUtils = {
     /**
      *
@@ -1501,30 +1523,6 @@
           fn.apply(this, args)
         }, delay)
       }
-    },
-    // JS对象转url参数
-    objectToQuery: function () {
-      const obj = arguments[0]
-      const prefix = arguments[1]
-      if (typeof obj !== 'object') return ''
-      const attrs = Object.keys(obj)
-      return attrs.reduce((query, attr, index) => {
-        // 判断是否是第一层第一个循环
-        if (index === 0 && !prefix) query += '?'
-        if (typeof obj[attr] === 'object') {
-          const subPrefix = prefix ? `${prefix}[${attr}]` : attr
-          query += this.objectToQuery(obj[attr], subPrefix)
-        } else {
-          if (prefix) {
-            query += `${prefix}[${attr}]=${obj[attr]}`
-          } else {
-            query += `${attr}=${obj[attr]}`
-          }
-        }
-        // 判断是否是第一层最后一个循环
-        if (index !== attrs.length - 1) query += '&'
-        return query
-      }, '')
     }
   }
 
@@ -1543,14 +1541,9 @@
       }
     }
   }
-
   addXMLRequestCallback(function (xhr) {
     xhr.addEventListener('load', function () {
-      if (
-        _config_hijacking_enabled &&
-        xhr.readyState === 4 &&
-        xhr.status === 200
-      ) {
+      if (hijacking_enabled && xhr.readyState === 4 && xhr.status === 200) {
         var fRes
         var resUrl = new URL(xhr.responseURL)
         if (resUrl.origin.indexOf('apic.liepin.com') !== -1) {
@@ -1559,45 +1552,31 @@
           ) {
             if (isTimesExhausted_lp) {
               console.log(errMsg_lp)
-              // myToast.normal('error', errMsg_lp, 5000, 'center')
               return false
             }
             fRes = JSON.parse(xhr.responseText)
-            console.info('resId', fRes.data.resId)
             GM_sendMessage('_lp_params_resId', fRes.data.resId)
-            window.stop()
-            console.log('dddd')
           } else if (
             resUrl.pathname === '/api/com.liepin.searchfront4c.pc-search-job'
           ) {
-            // fRes.data.data.jobCardList // 工作列表
-            // fRes.data.data.jobCardList[0].comp.compName // 公司名字
-            // fRes.data.data.jobCardList[0].comp.compStage // 公司阶段
-            // fRes.data.data.jobCardList[0].comp.compScale // 公司规模
             if (isTimesExhausted_lp) {
               console.log(errMsg_lp)
-              // myToast.normal('error', errMsg_lp, 5000, 'center')
               return false
             }
             fRes = JSON.parse(xhr.responseText)
-            console.log(fRes.data.data.jobCardList)
             GM_sendMessage('_lp_params_jobCardList', fRes.data.data.jobCardList)
           }
         } else if (resUrl.origin.indexOf('zhipin.com') !== -1) {
           if (isTimesExhausted_bs) {
             console.log(errMsg_bs)
             fRes = JSON.parse(xhr.responseText)
-            // myToast.normal('error', errMsg_bs, 5000, 'center')
             return false
           }
           if (resUrl.pathname === '/wapi/zpgeek/search/joblist.json') {
-            // _jobListJson_boss = fRes
             fRes = JSON.parse(xhr.responseText)
-
             GM_sendMessage('_jobListJson_boss', fRes.zpData.jobList)
           } else if (resUrl.pathname === '/wapi/zppassport/get/zpToken') {
             fRes = JSON.parse(xhr.responseText)
-
             GM_sendMessage('_zp_token', fRes.zpData.token)
           }
         } else if (resUrl.origin.indexOf('fe-api.zhaopin.com') !== -1) {
@@ -1623,7 +1602,6 @@
           ) {
             if (fRes.data && fRes.code === 200) {
               fRes = JSON.parse(xhr.responseText)
-
               GM_sendMessage('_zl_joblist', fRes.data.list)
             }
           }
@@ -1644,19 +1622,33 @@
     })
   })
 
+  /**
+   * 监听值的改变的回调函数
+   * @param {String} label 名字
+   * @param {Function} callback 回调函数
+   */
   function GM_onMessage(label, callback) {
     GM_addValueChangeListener(label, async function () {
       await callback.apply(undefined, arguments[2])
     })
   }
+  /**
+   * 设置值
+   * @param {String} label 名字
+   */
   function GM_sendMessage(label) {
     GM_setValue(label, Array.from(arguments).slice(1))
   }
 
+  /**
+   * 监听boss的岗位列表，用于发送简历
+   */
   GM_onMessage('_jobListJson_boss', async function (src) {
+    if (!_config_autoSendResume_enabled) {
+      return console.log('未开启自动投简历功能')
+    }
     if (isTimesExhausted_bs) {
       console.log(errMsg_bs)
-      // myToast.normal('error', errMsg_bs, 5000, 'center')
       return false
     }
     console.log('[onMessage]', '_jobListJson_boss', '=>', src)
@@ -1680,48 +1672,38 @@
     console.log('[onMessage]', '_zp_token', '=>', src)
   })
 
+  /**
+   * 监听zl的城市id，用于发送简历
+   */
+  GM_onMessage('_zl_params_cityIds', async (src) => {
+    console.log('[onMessage]', '_zl_params_cityIds', '=>', src)
+    if (!_config_autoSendResume_enabled) {
+      return console.log('未开启自动投简历功能')
+    }
+    await autoSendResume_zl_main(src)
+  })
+
   GM_onMessage('_zl_params_details', async (src) => {
     console.log('[onMessage]', '_zl_params_details', '=>', src)
   })
 
-  GM_onMessage('_zl_params_cityIds', async (src) => {
-    console.log('[onMessage]', '_zl_params_cityIds', '=>', src)
-    await autoSendResume_zl_main(src)
-  })
-
   GM_onMessage('_zl_currentJobNumbers', async (src) => {
     console.log('[onMessage]', '_zl_currentJobNumbers', '=>', src)
-    // await autoSendResume_zl_main(GM_getValue('_zl_params_cityIds')[1])
   })
 
   GM_onMessage('_zl_joblist', async (src) => {
     console.log('[onMessage]', '_zl_joblist', '=>', src)
   })
 
-  GM_onMessage('_lp_params_currentPage', async (src) => {
-    console.log('[onMessage]', '_lp_params_currentPage', '=>', src)
-  })
-
-  var first_lp_params_resId = null
-  var isCanCover = true
-  var isCanCover1 = true
-  var first_lp_params_jobCardList = null
-  GM_onMessage('_lp_params_resId', async (src) => {
-    console.log('[onMessage]', '_lp_params_resId', '=>', src)
-    if (isCanCover) {
-      first_lp_params_resId = src
-    }
-    isCanCover = false
-  })
-
+  /**
+   * 监听lp的岗位列表，用于发送简历
+   */
   GM_onMessage('_lp_params_jobCardList', async function (src) {
-    if (isCanCover1) {
-      first_lp_params_jobCardList = src
+    if (!_config_autoSendResume_enabled) {
+      return console.log('未开启自动投简历功能')
     }
-    isCanCover1 = false
     if (isTimesExhausted_lp) {
       console.log(errMsg_lp)
-      // myToast.normal('error', errMsg_lp, 5000, 'center')
       return false
     }
     var resid
@@ -1740,8 +1722,7 @@
       } else {
         resid = GM_getValue('_lp_params_resId')
       }
-      console.log('resid: ', resid)
-
+      // console.log('resid: ', resid)
       const uselessDiv1 = document.createElement('div')
       uselessDiv1.id = 'uselessDiv1'
       uselessDiv1.style.display = 'none'
@@ -1757,14 +1738,20 @@
           if (usellll !== null) {
             uselessDiv1.parentNode.removeChild(uselessDiv1)
           }
-          console.log('uselessDiv1: ', uselessDiv1)
+          // console.log('uselessDiv1: ', uselessDiv1)
         }, 5)
       }, 3000)
     } else {
-      console.log('firstRunFlag: ', firstRunFlag)
+      // console.log('firstRunFlag: ', firstRunFlag)
       firstRunFlag.remove()
     }
   })
+
+  GM_onMessage('_lp_params_resId', async (src) => {
+    console.log('[onMessage]', '_lp_params_resId', '=>', src)
+  })
+
+  // ------------------------------------------------------
 
   /**
    * 第一次运行
@@ -1830,10 +1817,10 @@
       </li>
     </ul>
     `
-      document.body.appendChild(div)
-      document
-        .querySelector('#blockFeatureSettings_isEnabled')
-        .addEventListener('click', console.log(this), false)
+      // document.body.appendChild(div)
+      // document
+      //   .querySelector('#blockFeatureSettings_isEnabled')
+      //   .addEventListener('click', console.log(this), false)
     }
     if (_config_autoBlock_enabled) {
       var pageType = null
@@ -1878,410 +1865,6 @@
         )
       }
     }
-  }
-
-  async function autoSendResume_boss_main(zp_token, _jobListJson_boss) {
-    try {
-      if (isTimesExhausted_bs) {
-        console.log(errMsg_bs)
-        myToast.normal('error', errMsg_bs, 5000, 'center')
-        return false
-      }
-      var newArr = _jobListJson_boss.map((item, index) => {
-        return Object.assign(
-          {},
-          {
-            jobId: item.encryptJobId,
-            securityId: item.securityId,
-            lid: item.lid,
-            brandName: item.brandName, // 公司名
-            brandIndustry: item.brandIndustry, // 公司所属行业
-            brandScaleName: item.brandScaleName, // 公司规模
-            brandStageName: item.brandStageName // 公司阶段
-          }
-        )
-      })
-      console.log(`总共要和${newArr.length}家公司发起沟通`)
-      var err, rs, templateText
-      var errorTimes = 0
-      var successTimes = 0
-      for (let i = 0; i < newArr.length; i++) {
-        var {
-          securityId,
-          jobId,
-          lid,
-          brandName,
-          brandIndustry,
-          brandScaleName,
-          brandStageName
-        } = newArr[i]
-        if (brandIndustry && brandScaleName && brandStageName) {
-          templateText = `(${brandIndustry}/${brandScaleName}/${brandStageName})`
-        } else if (!brandScaleName && brandStageName) {
-          templateText = `(${brandIndustry}/${brandStageName})`
-        } else if (brandScaleName && !brandStageName) {
-          templateText = `(${brandIndustry}/${brandScaleName})`
-        } else {
-          templateText = ''
-        }
-        console.log(i)
-        ;[err, rs] = await myUtils.awaitWrap(
-          autoSendResume_boss_try2Contact(securityId, jobId, lid, zp_token)
-        )
-        if (rs) {
-          console.log(
-            '[success]：',
-            `第${+(i + 1)}家\n${brandName}${templateText}\n问候语：${rs}`
-          )
-          successTimes++
-          console.log('successTimes: ', successTimes)
-        }
-        if (err) {
-          console.log(
-            '[error]：',
-            `第${+(i + 1)}家\n${brandName}${templateText}\n${err[0]} --- ${
-              err[1]
-            }`
-          )
-          errorTimes++
-          console.log('errorTimes: ', errorTimes)
-          if (err[1] === '今日沟通人数已达上限，请明天再试') {
-            errMsg_bs = '今日沟通人数已达上限，请明天再试'
-            console.log('已达上限啦，为你退出本次脚本！等明天再来吧')
-            isTimesExhausted_bs = true
-            break
-          }
-        }
-        await myUtils.sleep(3000)
-      }
-      console.log(
-        `与当前页面的全部公司结束沟通！\n成功：${successTimes}家；失败：${errorTimes}家`
-      )
-    } catch (error) {
-      console.error(error.message)
-    }
-  }
-
-  function autoSendResume_boss_try2Contact(securityId, jobId, lid, zp_token) {
-    return new Promise((resolve, reject) => {
-      try {
-        var config = {
-          method: 'post',
-          url: `https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=${securityId}&jobId=${jobId}&lid=${lid}`,
-          // params: {
-          //   securityId,
-          //   jobId,
-          //   lid
-          // },
-          headers: {
-            zp_token: zp_token
-          }
-        }
-        axios(config)
-          .then(function (result) {
-            try {
-              var res = result.data
-              if (res && res.zpData && res.zpData !== {}) {
-                if (res.zpData.greeting) {
-                  resolve(res.zpData.greeting)
-                } else if (res.zpData.showGreeting) {
-                  resolve('已发起沟通过！')
-                } else if (res.zpData.bizData) {
-                  reject([
-                    res.zpData.bizData.chatRemindDialog.title,
-                    res.zpData.bizData.chatRemindDialog.content
-                  ])
-                }
-              } else {
-                reject('api失效了')
-              }
-            } catch (error) {
-              console.log('error: ', error)
-            }
-          })
-          .catch(function (error) {
-            console.log(error)
-            reject('error: ', error)
-          })
-      } catch (error) {
-        console.log('error: ', error)
-      }
-    })
-  }
-
-  async function autoSendResume_zl_main(cityId) {
-    try {
-      console.log('autoSendResume_zl_main - cityId: ', cityId)
-      const allHrefNodeArr = document.querySelectorAll(
-        'a.joblist-box__iteminfo'
-      )
-      console.log('allHrefNodeArr: ', allHrefNodeArr)
-      var allHrefArr = [].slice.call(allHrefNodeArr, 0)
-      console.log('allHrefArr: ', allHrefArr)
-      const jobNumbersArr = allHrefArr
-        ? allHrefArr.map(function (el, index) {
-            var txt = autoSendResume_extractParams_zl_jobNumbers(el.href)
-            return { jobNumber: txt, index: index }
-          })
-        : []
-      console.log('jobNumbersArr: ', jobNumbersArr)
-      var jobNumbers = jobNumbersArr
-        ? jobNumbersArr.map(function (el, index) {
-            return el.jobNumber
-          })
-        : []
-      var cityIds = Array(jobNumbers.length).fill(cityId)
-      console.log('cityIds: ', cityIds)
-      var obj = GM_getValue('_zl_params_details')[0]
-      console.log('obj: ', JSON.stringify(obj))
-      console.log('obj[_resumeNumber]', obj['_resumeNumber'])
-      console.log('obj[_at]', obj['_at'])
-      console.log('obj[_rt]', obj['_rt'])
-      const [err, rs] = await myUtils.awaitWrap(
-        autoSendResume_zl_send(
-          jobNumbers,
-          cityIds,
-          obj['_resumeNumber'], // _zl_params_details['_resumeNumber'],
-          obj['_at'], // _zl_params_details['_at'],
-          obj['_rt'] // _zl_params_details['_rt']
-        )
-      )
-      console.log('rs: ', rs)
-      console.log('err: ', err)
-    } catch (error) {
-      console.log('error: ', error)
-    }
-  }
-
-  function autoSendResume_zl_send(jobNumbers, cityIds, resumeNumber, at, rt) {
-    return new Promise((resolve, reject) => {
-      try {
-        console.log('1.5秒后将开始自动投！')
-        setTimeout(() => {
-          var config = {
-            // url: `https://fe-api.zhaopin.com/c/pc/alan/jobs/application?x-zp-page-request-id=${x_zp_page_request_id}&x-zp-client-id=${x_zp_client_id}`,
-            url: `https://fe-api.zhaopin.com/c/pc/alan/jobs/application`,
-            method: 'POST',
-            headers: {},
-            data: JSON.stringify({
-              jobNumbers, // 从岗位列表中提取CCXXXX数组
-              cityIds, // 劫持获取city的函数 city-page/user-city
-              resumeNumber: String(resumeNumber), // 劫持获取个人信息的请求 user/detail?detail=true
-              at: String(at), // 劫持之前发的请求中的at和rt 以及page_r..._id 和client.id
-              rt: String(rt), // 请求的链接中携带有这些参数
-              // "resumeNumber": "JI782694595R90500000000",
-              // "at": "2a086dd7e93a40549fc18593d485fbd1",
-              // "rt": "ee3d101df4f4458dab4dabb598fbc9c9",
-              language: 3,
-              batched: true,
-              inviteCode: '',
-              ignoreIntention: 1,
-              ignoreBlackType: '',
-              deliveryChannelType: 1,
-              pageCode: 0,
-              jobSource: 'RECOMMENDATION'
-            })
-          }
-          axios(config)
-            .then((result) => {
-              try {
-                var res = result.data
-                !res.error ? resolve(res.message) : reject(res.message)
-              } catch (e) {
-                console.error('[autoSendResume_zl_send]', e.message)
-              }
-            })
-            .catch(function (error) {
-              console.log(error)
-            })
-
-          //       GM_xmlhttpRequest({
-          //         url: `https://fe-api.zhaopin.com/c/pc/alan/jobs/application?x-zp-page-request-id=${x_zp_page_request_id}&x-zp-client-id=${x_zp_client_id}`,
-          //         method: 'POST',
-          //         headers: {},
-          //         data: JSON.stringify({
-          //           // https://fe-api.zhaopin.com/c/i/jobs/keyword-company-search?at=2a086dd7e93a40549fc18593d485fbd1&rt=ee3d101df4f4458dab4dabb598fbc9c9&keyword=前端&filter_c_workCity=765&_v=0.01143897&x-zp-page-request-id=5b71ddc9f0264a9d8a9edd47697d7172-1664100259716-965233&x-zp-client-id=65a81d17-e643-4440-b121-5fc677123004
-          //           jobNumbers, // 从岗位列表中提取CCXXXX数组
-          //           cityIds, // 劫持获取city的函数 city-page/user-city
-          //           resumeNumber, // 劫持获取个人信息的请求 user/detail?detail=true
-          //           at, // 劫持之前发的请求中的at和rt 以及page_r..._id 和client.id
-          //           rt, // 请求的链接中携带有这些参数
-          //           language: 3,
-          //           batched: true,
-          //           inviteCode: '',
-          //           ignoreIntention: 1,
-          //           ignoreBlackType: '',
-          //           deliveryChannelType: 1,
-          //           pageCode: 0,
-          //           jobSource: 'RECOMMENDATION'
-          //         }),
-          //         onload: function (xhr) {
-          //           try {
-          //             var res = JSON.parse(xhr.responseText)
-          //             if (res && res.status === 200 && res.message) {
-          //               resolve(res.message)
-          //             } else {
-          //               reject('api失效了')
-          //             }
-          //           } catch (e) {
-          //             console.error('[autoSendResume_zl_send]', e.message)
-          //           }
-          //         }
-          //       })
-        }, 1500)
-      } catch (error) {
-        console.log('error: ', error)
-      }
-    })
-  }
-
-  function autoSendResume_extractParams_zl_jobNumbers(str) {
-    var nurl = new URL(str)
-    // http://jobs.zhaopin.com/CCL1422065360J40358900901.htm?refcode=4019&srccode=401901&preactionid=6ee50b40-9edd-4f31-8bfc-6a7c15e29276
-    var reg = /\/([^&#]+)\.htm/
-    var query = nurl.pathname.match(reg)
-    return query[1] || null
-  }
-
-  // function autoSendResume_extractParams_zl_all(str) {
-  //   var nurl = new URL(str)
-  //   // var  str =  ?at=2a086dd7e93a40549fc18593d485fbd1&rt=ee3d101df4f4458dab4dabb598fbc9c9&_v=0.69037191&x-zp-page-request-id=9f7caf31dad0488fa737850f039291e6-1664103185404-816213&x-zp-client-id=65a81d17-e643-4440-b121-5fc677123004
-  //   var reg =
-  //     /\?detail=true\&at=([^&#]+)\&rt=([^&#]+)\&_v=([^&#]+)\&x-zp-page-request-id=([^&#]+)\&x-zp-client-id=([^&#]+)/
-  //   var query = nurl.search.match(reg)
-  //   return {
-  //     at: query[1] || null,
-  //     rt: query[2] || null,
-  //     x_zp_page_request_id: query[4] || null,
-  //     x_zp_client_id: query[5] || null
-  //   }
-  // }
-
-  function autoSendResume_lp_extractJobList(
-    originJobList,
-    isCreateCompanyArr = false
-  ) {
-    return originJobList
-      ? originJobList.map(function (el, index) {
-          var job = el.job
-          var comp = el.comp
-          var obj = {
-            jobIndex: String(+(index % 10)),
-            jobId: String(job.jobId),
-            jobKind: job.jobKind !== 2 ? String(2) : String(job.jobKind),
-            info: `第${+(index + 1)}家公司\n${job.title}【${job.dq}】${
-              job.salary
-            }\n${comp.compName} | ${comp.compIndustry} ${
-              comp.compStage ? comp.compStage : ''
-            } ${comp.compScale}`
-          }
-          if (!isCreateCompanyArr) {
-            delete obj.info
-          }
-          return obj
-        })
-      : []
-  }
-
-  async function autoSendResume_lp_main(originJobList, resId) {
-    if (isTimesExhausted_lp) {
-      console.log(errMsg_lp)
-      myToast.normal('error', errMsg_lp, 5000, 'center')
-      return false
-    }
-    if (resId === undefined || resId === null) {
-      resId = await autoSendResume_lp_get_resId()
-    }
-    var newJobList = myUtils.sliceArrBeEQLengthGroup(
-      autoSendResume_lp_extractJobList(originJobList, false),
-      10
-    )
-    console.log('newJobList: ', newJobList)
-    var _newJobList = myUtils.sliceArrBeEQLengthGroup(
-      autoSendResume_lp_extractJobList(originJobList, true),
-      10
-    )
-    var err, rs
-    for (let i = 0; i < newJobList.length; i++) {
-      ;[err, rs] = await myUtils.awaitWrap(
-        autoSendResume_lp_send(resId, newJobList[i])
-      )
-      if (rs) {
-        console.log(rs)
-        var templateText = ''
-        for (var j = 0; j < _newJobList[i].length; j++) {
-          templateText += `\n` + _newJobList[i][j].info
-        }
-        console.log('templateText: ', templateText)
-      }
-      if (err) {
-        if (err.code === '20010') {
-          errMsg_lp = err.msg
-          console.info(errMsg_lp)
-          isTimesExhausted_lp = true
-          break
-        } else if (err.code === '-1401') {
-          myToast.normal('warning', err.msg, 3000, 'center')
-          return console.log(err.msg)
-        }
-      }
-      await myUtils.sleep(3000)
-    }
-    console.log('已全部发完简历！')
-  }
-
-  function autoSendResume_lp_send(resId, jobInfo) {
-    return new Promise((resolve, reject) => {
-      var myHeaders = new Headers()
-      myHeaders.append('Accept', 'application/json, text/plain, */*')
-      myHeaders.append('Accept-Language', 'zh-CN,zh;q=0.9')
-      myHeaders.append('Connection', 'keep-alive')
-      myHeaders.append('Content-Type', 'application/x-www-form-urlencoded')
-      myHeaders.append('Origin', 'https://c.liepin.com')
-      myHeaders.append('Referer', 'https://c.liepin.com/')
-      myHeaders.append('Sec-Fetch-Dest', 'empty')
-      myHeaders.append('Sec-Fetch-Mode', 'cors')
-      myHeaders.append('Sec-Fetch-Site', 'same-site')
-      myHeaders.append(
-        'User-Agent',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'
-      )
-      myHeaders.append('X-Client-Type', 'web')
-      myHeaders.append('X-Fscp-Fe-Version', '6f6ae4a')
-      myHeaders.append('X-Fscp-Std-Info', '{"client_id": "40106"}')
-      myHeaders.append(
-        'X-Fscp-Trace-Id',
-        '9751cb68-507c-4580-ad2c-b3a6c295aca3'
-      )
-      myHeaders.append('X-Fscp-Version', '1.1')
-      myHeaders.append('X-Requested-With', 'XMLHttpRequest')
-      var urlencoded = new URLSearchParams()
-      urlencoded.append('resId', resId)
-      urlencoded.append('jobInfo', JSON.stringify(jobInfo))
-
-      var requestOptions = {
-        method: 'POST',
-        headers: myHeaders,
-        body: urlencoded,
-        redirect: 'follow',
-        credentials: 'include'
-      }
-      // debugger
-      fetch(
-        'https://apic.liepin.com/api/com.liepin.capply.platform.apply.batch-apply',
-        requestOptions
-      )
-        .then((response) => response.json())
-        .then((result) => {
-          if (result.flag === 0 && result.code === '20010') {
-            return reject({
-              code: result.code,
-              msg: result.msg
-            })
-          } else return resolve(result)
-        })
-        .catch((error) => reject('error', error))
-    })
   }
 
   /**
@@ -2397,7 +1980,6 @@
         Swal.fire({
           title: '发现黑名单公司!!',
           type: 'error',
-          // html: `<span>公司名：<span style="color:red">${tempString}</span></span><br/><br/><span class="text-muted">因为该公司在你填写的黑名单公司列表哦！<br/>如果有误判可以移除该公司！</span>`,
           html: `<span>公司名：<span style="color:red">${
             hitsCompanyArr[0].bName
           }</span></span><br/>${
@@ -2412,9 +1994,7 @@
           allowOutsideClick: false,
           allowEscapeKey: false,
           allowEnterKey: false
-        }).then((result) => {
-          // console.log(result)
-        })
+        }).then((result) => {})
       } else if (pageType === 2) {
         var tempString = ''
         for (var t of hitsCompanyArr) {
@@ -2461,10 +2041,8 @@
   async function autoBlock_switchBlackMode(isShow, target, pattern, siteType) {
     if (!isShow) {
       if (siteType === 3) {
-        // target.parentNode.parentNode.parentNode.parentNode.parentNode.style.display = 'none'
         target.parentNode.parentNode.parentNode.parentNode.parentNode.remove()
       } else {
-        // target.parentNode.parentNode.parentNode.parentNode.style.display =  'none'
         target.parentNode.parentNode.parentNode.parentNode.remove()
       }
     } else {
@@ -2501,6 +2079,15 @@
     return 'end'
   }
 
+  /**
+   * 屏蔽功能的主函数
+   * @param {Boolean} isfirstRun 是否是第一次运行
+   * @param {Array} blackListArr 黑名单列表
+   * @param {Array} whiteListArr 白名单列表
+   * @param {Number} pageType 页面类型 type:1 公司信息页、招聘详情页 type:2 招聘列表
+   * @param {Node} listDomSelectorArr 用于判断网站的dom元素类名
+   * @param {Number} delay 延迟获取的毫秒数
+   */
   async function autoBlock_mainFn(
     isfirstRun,
     blackListArr,
@@ -2535,9 +2122,7 @@
         res.push(b)
       }
     }
-    console.log(res)
-    console.log('first_lp_params_jobCardList: ', first_lp_params_jobCardList)
-    console.log('first_lp_params_resId: ', first_lp_params_resId)
+    // console.log(res)
     if (
       isfirstRun &&
       res.length === listDomSelectorArr.length &&
@@ -2547,6 +2132,150 @@
     }
   }
 
+  // ------------------------------------------------------
+
+  // ------------------------------------------------------
+
+  /**
+   * 发送简历-boss-主函数
+   * @param {String} zp_token boss身份验证zp_token
+   * @param {Array} _jobListJson_boss 岗位列表数组
+   * @returns
+   */
+  async function autoSendResume_boss_main(zp_token, _jobListJson_boss) {
+    try {
+      if (isTimesExhausted_bs) {
+        console.log(errMsg_bs)
+        myToast.normal('error', errMsg_bs, 5000, 'center')
+        return false
+      }
+      var newArr = _jobListJson_boss.map((item, index) => {
+        return Object.assign(
+          {},
+          {
+            jobId: item.encryptJobId,
+            securityId: item.securityId,
+            lid: item.lid,
+            brandName: item.brandName, // 公司名
+            brandIndustry: item.brandIndustry, // 公司所属行业
+            brandScaleName: item.brandScaleName, // 公司规模
+            brandStageName: item.brandStageName // 公司阶段
+          }
+        )
+      })
+      console.log(`总共要和${newArr.length}家公司发起沟通`)
+      var err, rs, templateText
+      var errorTimes = 0
+      var successTimes = 0
+      for (let i = 0; i < newArr.length; i++) {
+        var {
+          securityId,
+          jobId,
+          lid,
+          brandName,
+          brandIndustry,
+          brandScaleName,
+          brandStageName
+        } = newArr[i]
+        if (brandIndustry && brandScaleName && brandStageName) {
+          templateText = `(${brandIndustry}/${brandScaleName}/${brandStageName})`
+        } else if (!brandScaleName && brandStageName) {
+          templateText = `(${brandIndustry}/${brandStageName})`
+        } else if (brandScaleName && !brandStageName) {
+          templateText = `(${brandIndustry}/${brandScaleName})`
+        } else {
+          templateText = ''
+        }
+        ;[err, rs] = await myUtils.awaitWrap(
+          autoSendResume_boss_try2Contact(securityId, jobId, lid, zp_token)
+        )
+        if (rs) {
+          console.log(
+            '[success]：',
+            `第${+(i + 1)}家\n${brandName}${templateText}\n问候语：${rs}`
+          )
+          successTimes++
+        }
+        if (err) {
+          console.log(
+            '[error]：',
+            `第${+(i + 1)}家\n${brandName}${templateText}\n${err[0]} --- ${
+              err[1]
+            }`
+          )
+          errorTimes++
+
+          if (err[1] === '今日沟通人数已达上限，请明天再试') {
+            errMsg_bs = '今日沟通人数已达上限，请明天再试'
+            console.log('已达上限啦，为你退出本次脚本！等明天再来吧')
+            isTimesExhausted_bs = true
+            break
+          }
+        }
+        await myUtils.sleep(3000)
+      }
+      console.log(
+        `与当前页面的全部公司结束沟通！\n成功：${successTimes}家；失败：${errorTimes}家`
+      )
+    } catch (error) {
+      console.error(error.message)
+    }
+  }
+
+  /**
+   * 发起沟通-boss，因为boss不能直接发简历
+   * @param {String} securityId boss身份验证securityId
+   * @param {String} jobId jobid
+   * @param {String} lid boss身份验证lid
+   * @param {String} zp_token boss身份验证zp_token
+   * @returns
+   */
+  function autoSendResume_boss_try2Contact(securityId, jobId, lid, zp_token) {
+    return new Promise((resolve, reject) => {
+      try {
+        var config = {
+          method: 'post',
+          url: `https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=${securityId}&jobId=${jobId}&lid=${lid}`,
+          headers: {
+            zp_token: zp_token
+          }
+        }
+        axios(config)
+          .then(function (result) {
+            try {
+              var res = result.data
+              if (res && res.zpData && res.zpData !== {}) {
+                if (res.zpData.greeting) {
+                  resolve(res.zpData.greeting)
+                } else if (res.zpData.showGreeting) {
+                  resolve('已发起沟通过！')
+                } else if (res.zpData.bizData) {
+                  reject([
+                    res.zpData.bizData.chatRemindDialog.title,
+                    res.zpData.bizData.chatRemindDialog.content
+                  ])
+                }
+              } else {
+                reject('api失效了')
+              }
+            } catch (error) {
+              console.log('error: ', error)
+            }
+          })
+          .catch(function (error) {
+            console.log(error)
+            reject('error: ', error)
+          })
+      } catch (error) {
+        console.log('error: ', error)
+      }
+    })
+  }
+
+  /**
+   * 获取boss的zp_token
+   * @returns zp_token
+   */
   function autoSendResume_boss_get_zp_token() {
     return new Promise((resolve, reject) => {
       try {
@@ -2566,6 +2295,258 @@
     })
   }
 
+  /**
+   * 发送简历-zl-主函数
+   * @param {Number} cityId 岗位所在城市的代码，其实也是所在地区的代码
+   */
+  async function autoSendResume_zl_main(cityId) {
+    try {
+      const allHrefNodeArr = document.querySelectorAll(
+        'a.joblist-box__iteminfo'
+      )
+      var allHrefArr = [].slice.call(allHrefNodeArr, 0)
+      const jobNumbersArr = allHrefArr
+        ? allHrefArr.map(function (el, index) {
+            var txt = autoSendResume_zl_extract_jobNumbers(el.href)
+            return { jobNumber: txt, index: index }
+          })
+        : []
+      var jobNumbers = jobNumbersArr
+        ? jobNumbersArr.map(function (el, index) {
+            return el.jobNumber
+          })
+        : []
+      var cityIds = Array(jobNumbers.length).fill(cityId)
+      var obj = GM_getValue('_zl_params_details')[0]
+      const [err, rs] = await myUtils.awaitWrap(
+        autoSendResume_zl_send(
+          jobNumbers,
+          cityIds,
+          obj['_resumeNumber'],
+          obj['_at'],
+          obj['_rt']
+        )
+      )
+      console.log('rs: ', rs)
+      console.log('err: ', err)
+    } catch (error) {
+      console.log('error: ', error)
+    }
+  }
+
+  /**
+   * 发送简历-zl
+   * @param {Array} jobNumbers 所有岗位的jobNumbers数组
+   * @param {Array} cityIds 岗位所在城市的数组
+   * @param {String} resumeNumber 简历id
+   * @param {String} at zl的身份验证at
+   * @param {String} rt zl的身份验证rt
+   * @returns
+   */
+  function autoSendResume_zl_send(jobNumbers, cityIds, resumeNumber, at, rt) {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('1.5秒后将开始自动投！')
+        setTimeout(() => {
+          var config = {
+            url: `https://fe-api.zhaopin.com/c/pc/alan/jobs/application`,
+            method: 'POST',
+            headers: {},
+            data: JSON.stringify({
+              jobNumbers, // 从岗位列表中提取CCXXXX数组
+              cityIds, // 劫持获取city的函数 city-page/user-city
+              resumeNumber: String(resumeNumber), // 劫持获取个人信息的请求 user/detail?detail=true
+              at: String(at), // 劫持之前发的请求中的at和rt 以及page_r..._id 和client.id
+              rt: String(rt), // 请求的链接中携带有这些参数
+              language: 3,
+              batched: true,
+              inviteCode: '',
+              ignoreIntention: 1,
+              ignoreBlackType: '',
+              deliveryChannelType: 1,
+              pageCode: 0,
+              jobSource: 'RECOMMENDATION'
+            })
+          }
+          axios(config)
+            .then((result) => {
+              try {
+                var res = result.data
+                !res.error ? resolve(res.message) : reject(res.message)
+              } catch (e) {
+                console.error('[autoSendResume_zl_send]', e.message)
+              }
+            })
+            .catch(function (error) {
+              console.log(error)
+            })
+        }, 1500)
+      } catch (error) {
+        console.log('error: ', error)
+      }
+    })
+  }
+
+  /**
+   * 发送简历-zl-提取页面中所有岗位的jobNumbers
+   * @param {String} str 岗位招聘信息的链接
+   * @returns jobNumbers
+   */
+  function autoSendResume_zl_extract_jobNumbers(str) {
+    var nurl = new URL(str)
+    var reg = /\/([^&#]+)\.htm/
+    var query = nurl.pathname.match(reg)
+    return query[1] || null
+  }
+
+  /**
+   * 发送简历-lp-提取工作列表（关于公司信息）
+   * @param {Array} originJobList 工作列表 jobKind、jobId、jobIndex
+   * @param {Boolean} isSaveCompanyInfo  是否要保存公司信息
+   * @returns
+   */
+  function autoSendResume_lp_extract_JobList(
+    originJobList,
+    isSaveCompanyInfo = false
+  ) {
+    return originJobList
+      ? originJobList.map(function (el, index) {
+          var job = el.job
+          var comp = el.comp
+          var obj = {
+            jobIndex: String(+(index % 10)),
+            jobId: String(job.jobId),
+            jobKind: job.jobKind !== 2 ? String(2) : String(job.jobKind),
+            info: `第${+(index + 1)}家公司\n${job.title}【${job.dq}】${
+              job.salary
+            }\n${comp.compName} | ${comp.compIndustry} ${
+              comp.compStage ? comp.compStage : ''
+            } ${comp.compScale}`
+          }
+          if (!isSaveCompanyInfo) {
+            delete obj.info
+          }
+          return obj
+        })
+      : []
+  }
+
+  /**
+   * 发送简历-lp-主函数
+   * @param {Array} originJobList 工作列表 jobKind、jobId、jobIndex
+   * @param {String} resId 简历id
+   * @returns
+   */
+  async function autoSendResume_lp_main(originJobList, resId) {
+    if (isTimesExhausted_lp) {
+      console.log(errMsg_lp)
+      myToast.normal('error', errMsg_lp, 5000, 'center')
+      return false
+    }
+    if (resId === undefined || resId === null) {
+      resId = await autoSendResume_lp_get_resId()
+    }
+    var newJobList = myUtils.sliceArrBeEQLengthGroup(
+      autoSendResume_lp_extract_JobList(originJobList, false),
+      10
+    )
+    var _newJobList = myUtils.sliceArrBeEQLengthGroup(
+      autoSendResume_lp_extract_JobList(originJobList, true),
+      10
+    )
+    var err, rs
+    for (let i = 0; i < newJobList.length; i++) {
+      ;[err, rs] = await myUtils.awaitWrap(
+        autoSendResume_lp_send(resId, newJobList[i])
+      )
+      if (rs) {
+        console.log(rs)
+        var templateText = ''
+        for (var j = 0; j < _newJobList[i].length; j++) {
+          templateText += `\n` + _newJobList[i][j].info
+        }
+        console.log('templateText: ', templateText)
+      }
+      if (err) {
+        if (err.code === '20010') {
+          errMsg_lp = err.msg
+          console.info(errMsg_lp)
+          isTimesExhausted_lp = true
+          break
+        } else if (err.code === '-1401') {
+          myToast.normal('warning', err.msg, 3000, 'center')
+          return console.log(err.msg)
+        }
+      }
+      await myUtils.sleep(3000)
+    }
+    console.log('已全部发完简历！')
+  }
+
+  /**
+   *  发送简历-lp
+   * @param {String} resId 简历id
+   * @param {Array} jobInfo 工作的jobKind、jobId、jobIndex
+   * @returns code || msg
+   */
+  function autoSendResume_lp_send(resId, jobInfo) {
+    return new Promise((resolve, reject) => {
+      var myHeaders = new Headers()
+      myHeaders.append('Accept', 'application/json, text/plain, */*')
+      myHeaders.append('Accept-Language', 'zh-CN,zh;q=0.9')
+      myHeaders.append('Connection', 'keep-alive')
+      myHeaders.append('Content-Type', 'application/x-www-form-urlencoded')
+      myHeaders.append('Origin', 'https://c.liepin.com')
+      myHeaders.append('Referer', 'https://c.liepin.com/')
+      myHeaders.append('Sec-Fetch-Dest', 'empty')
+      myHeaders.append('Sec-Fetch-Mode', 'cors')
+      myHeaders.append('Sec-Fetch-Site', 'same-site')
+      myHeaders.append(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'
+      )
+      myHeaders.append('X-Client-Type', 'web')
+      myHeaders.append('X-Fscp-Fe-Version', '6f6ae4a')
+      myHeaders.append('X-Fscp-Std-Info', '{"client_id": "40106"}')
+      myHeaders.append(
+        'X-Fscp-Trace-Id',
+        '9751cb68-507c-4580-ad2c-b3a6c295aca3'
+      )
+      myHeaders.append('X-Fscp-Version', '1.1')
+      myHeaders.append('X-Requested-With', 'XMLHttpRequest')
+      var urlencoded = new URLSearchParams()
+      urlencoded.append('resId', resId)
+      urlencoded.append('jobInfo', JSON.stringify(jobInfo))
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: urlencoded,
+        redirect: 'follow',
+        credentials: 'include'
+      }
+
+      fetch(
+        'https://apic.liepin.com/api/com.liepin.capply.platform.apply.batch-apply',
+        requestOptions
+      )
+        .then((response) => response.json())
+        .then((result) => {
+          if (result.flag === 0 && result.code === '20010') {
+            reject({
+              code: result.code,
+              msg: result.msg
+            })
+          } else resolve(result)
+        })
+        .catch((error) => reject('error', error))
+    })
+  }
+
+  /**
+   * 获取lp的resId
+   * @returns resId || message
+   */
   function autoSendResume_lp_get_resId() {
     return new Promise((resolve, reject) => {
       var myHeaders = new Headers()
@@ -2615,18 +2596,10 @@
         .then((response) => response.json())
         .then((result) => resolve(result.data ? result.data.resId : result.msg))
         .catch((error) => reject('error', error))
-      // GM_xmlhttpRequest({
-      //   url: `https://apic.liepin.com/api/com.liepin.usercx.pc.user.base-property`,
-      //   method: 'post',
-      //   onload: function (xhr) {
-      //     var res = JSON.parse(xhr.responseText)
-      //     console.log('res: ', res)
-      //     console.log('resId: ', res.data.resId)
-      //     resolve(res.data.resId)
-      //   }
-      // })
     })
   }
+
+  // ------------------------------------------------------
 
   await firstRun(_config_blackListArr, _config_whiteListArr)
 })()
