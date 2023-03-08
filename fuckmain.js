@@ -1,3 +1,40 @@
+// ==UserScript==
+// @name         自动屏蔽黑名单公司
+// @namespace    https://freysu.github.io/
+// @version      1.0
+// @description  F**k BlackList Company！Auto Blocking Company and Auto Send Resume！
+// @author       FreySu
+// @match        *://*.zhipin.com/*
+// @match        *://*.zhaopin.com/*
+// @match        *://*.liepin.com/*
+// @match        *://*.lagou.com/*
+// @run-at       document-body
+// @license      Apache Licence 2.0
+// @require      https://cdn.staticfile.org/limonte-sweetalert2/8.19.0/sweetalert2.all.min.js
+// @require      https://unpkg.com/axios/dist/axios.min.js
+// @require      https://cdn.staticfile.org/crypto-js/4.1.1/crypto-js.min.js
+// @require      https://cdn.staticfile.org/jsencrypt/3.2.1/jsencrypt.min.js
+// @require      https://cdn.staticfile.org/qs/6.10.1/qs.js
+// @grant        GM_getResourceText
+// @grant        GM_addStyle
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_listValues
+// @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
+// @grant        GM_addValueChangeListener
+// @grant        unsafeWindow
+// @connect      https://sa.lagou.com/collect.gif
+// ==/UserScript==
+
+/* eslint-disable no-inner-declarations */
+/* eslint-disable no-undef */
+/* eslint-disable no-lone-blocks */
+/* eslint-disable new-cap */
+/* eslint-disable no-extra-semi */
+/* eslint-disable space-before-function-paren */
+/* eslint-disable indent */
 ;(async function () {
   'use strict'
   // ------------------------------------------------------
